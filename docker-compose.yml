@@ -1,0 +1,57 @@
+version: "3.2"
+services:
+  auto_bangumi_qbittorrent:
+    container_name: auto_bangumi-qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Shanghai
+      - UMASK_SET=022
+      - TL=https://githubraw.sleele.workers.dev/XIU2/TrackersListCollection/master/best.txt
+      - UT=true
+      - QB_EE_BIN=true
+    volumes:
+      - ./qb_config:/config
+      - ./downloads:/downloads # 填入下载绝对路径
+    ports:
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+    networks:
+      - auto_bangumi
+    restart: unless-stopped
+    image: ddsderek/qbittorrent:4.3.9_4.3.9.10
+
+  auto_bangumi:
+    container_name: AutoBangumi
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Shanghai
+      - AB_INTERVAL_TIME=1800
+      - AB_DOWNLOADER_HOST=auto_bangumi_qbittorrent:8080
+      - AB_DOWNLOADER_USERNAME=admin
+      - AB_DOWNLOADER_PASSWORD=adminadmin
+      - AB_METHOD=pn
+      - AB_GROUP_TAG=True
+      - AB_NOT_CONTAIN=720
+      - AB_DOWNLOAD_PATH=/downloads/Bangumi
+      - AB_RSS=
+      - AB_DEBUG_MODE=False
+      - AB_EP_COMPLETE=False
+    volumes:
+      - ./auto_bangumi:/config
+    networks:
+      - auto_bangumi
+    ports:
+      - 7892:7892
+    dns:
+      - 8.8.8.8
+      - 223.5.5.5
+    restart: unless-stopped
+    image: ddsderek/auto_bangumi:latest
+    depends_on:
+      - auto_bangumi_qbittorrent
+
+networks:
+  auto_bangumi:
