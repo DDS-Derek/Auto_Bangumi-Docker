@@ -26,7 +26,8 @@ COPY --chmod=755 __version__.py /src/__version__.py
 RUN apk add --update --no-cache \
     curl \
     shadow \
-    su-exec
+    su-exec \
+    bash
 
 RUN addgroup -S auto_bangumi && \
     adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi && \
