@@ -1,44 +1,78 @@
-# syntax=docker/dockerfile:1
 FROM python:3.10-buster AS build
 
-RUN apt-get update -y && \
-    apt-get install git -y
-RUN git clone https://github.com/DDS-Derek/Auto_Bangumi.git /app
 RUN mkdir /install
+
 WORKDIR /install
-RUN cp /app/requirements.txt /install/requirements.txt
-RUN python3 -m pip install --upgrade pip \
-    && pip install -r requirements.txt --prefix="/install"
 
-FROM python:3.10-alpine AS permission
-
-COPY --from=build --chmod=777 /install /usr/local
-RUN chmod -R 777 /usr/local
+RUN python3 -m pip install --upgrade pip && \
+    pip install \
+        -r https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/requirements.txt \
+        --prefix="/install"
 
 FROM python:3.10-alpine
 
-WORKDIR /src
-
-COPY --from=permission --chmod=777 /usr/local /usr/local
-COPY --from=build --chmod=755 /app/src /src
-COPY --chmod=755 __version__.py /src/__version__.py
-
-RUN apk add --update --no-cache \
-    curl \
-    shadow \
-    su-exec \
-    bash
-
-RUN addgroup -S auto_bangumi && \
-    adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi && \
-    usermod -s /bin/bash auto_bangumi && \
-    mkdir -p "/config" && \
-    chmod a+x run.sh && \
-    chmod a+x getWebUI.sh
+ENV Auto_Bangumi_TAG=2.5.25-fix
 
 ENV TZ=Asia/Shanghai \
     PUID=1000 \
     PGID=1000
+
+RUN apk add --update --no-cache \
+        bash \
+        su-exec \
+        tzdata \
+        shadow \
+        curl \
+    && \
+    rm -rf \
+        /tmp/* \
+        /root/.cache/var/cache/apk/*
+
+COPY --from=build --chmod=777 /install /usr/local
+
+WORKDIR /src
+
+RUN wget \
+        https://github.com/EstrellaXD/Auto_Bangumi/archive/refs/tags/${Auto_Bangumi_TAG}.tar.gz \
+        -O /tmp/Auto_Bangumi.tar.gz \
+    && \
+    tar \
+        -zxvf /tmp/Auto_Bangumi.tar.gz \
+        -C /tmp \
+        --strip-components 1 \
+    && \
+    mv /tmp/src/* /src \
+    && \
+    wget \
+        https://raw.githubusercontent.com/DDS-Derek/Auto_Bangumi/main/src/run.sh \
+        -O /src/run.sh \
+    && \
+    wget \
+        https://raw.githubusercontent.com/DDS-Derek/Auto_Bangumi/main/src/setID.sh \
+        -O /src/setID.sh \
+    && \
+    addgroup \
+        -S auto_bangumi \
+    && \
+    adduser \
+        -S auto_bangumi \
+        -G auto_bangumi \
+        -h /src \
+    && \
+    usermod -s /bin/bash auto_bangumi \
+    && \
+    mkdir -p /config \
+    && \
+    chmod a+x \
+        run.sh \
+        getWebUI.sh \
+        setID.sh \
+    && \
+    rm -rf \
+        /tmp/* \
+        /root/.cache/var/cache/apk/* \
+    && \
+    echo "version = '"${Auto_Bangumi_TAG}"'" > __version__.py
 
 EXPOSE 7892
 
